@@ -1,23 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Modal, Platform, Alert
+  View,
+  Text,
+  TextInput,
+  Button,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  TouchableOpacity,
+  Platform
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function CadastroScreen({ route, navigation }: any) {
-  const { remedio, index } = route.params || {};
-  const [nome, setNome] = useState(remedio ? remedio.nome : '');
-  const [hora, setHora] = useState(remedio ? new Date(`1970-01-01T${remedio.hora}:00`) : new Date());
-  const [mostrarPicker, setMostrarPicker] = useState(false);
-  const [diasSelecionados, setDiasSelecionados] = useState<string[]>(remedio ? remedio.dias : []);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [remedioTomado, setRemedioTomado] = useState<string | null>(remedio ? remedio.tomado : null);
+const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-  const diasDaSemana = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
+export default function RegisterScreen() {
+  const [nome, setNome] = useState('');
+  const [hora, setHora] = useState(new Date());
+  const [mostrarHoraPicker, setMostrarHoraPicker] = useState(false);
+  const [diasSelecionados, setDiasSelecionados] = useState<string[]>([]);
 
-  const alternarDia = (dia: string) => {
+  const toggleDia = (dia: string) => {
     if (diasSelecionados.includes(dia)) {
       setDiasSelecionados(diasSelecionados.filter(d => d !== dia));
     } else {
@@ -25,181 +29,158 @@ export default function CadastroScreen({ route, navigation }: any) {
     }
   };
 
-  const handleSalvar = async () => {
-    const novoRemedio = {
-      nome,
-      hora: hora.toLocaleTimeString().slice(0, 5),
-      dias: diasSelecionados,
-      tomado: remedioTomado
-    };
-
-    const registrosExistentes = await AsyncStorage.getItem('registros');
-    const registros = registrosExistentes ? JSON.parse(registrosExistentes) : [];
-
-    if (index !== undefined) {
-      registros[index] = novoRemedio;
-    } else {
-      registros.push(novoRemedio);
+  const salvarRemedio = async () => {
+    if (!nome.trim() || diasSelecionados.length === 0) {
+      Alert.alert('Preencha todos os campos', 'Nome e dias são obrigatórios.');
+      return;
     }
 
-    await AsyncStorage.setItem('registros', JSON.stringify(registros));
-    Alert.alert('Remédio salvo com sucesso!');
-    navigation.goBack();
+    try {
+      const remediosSalvos = await AsyncStorage.getItem('remedios');
+      const remedios = remediosSalvos ? JSON.parse(remediosSalvos) : [];
+
+      remedios.push({
+        nome,
+        hora: hora.toTimeString().substring(0, 5), // "HH:MM"
+        dias: diasSelecionados,
+      });
+
+      await AsyncStorage.setItem('remedios', JSON.stringify(remedios));
+      Alert.alert('Remédio cadastrado com sucesso!');
+      setNome('');
+      setDiasSelecionados([]);
+      setHora(new Date());
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível salvar o remédio.');
+    }
   };
-
-  const handleVerRemedios = () => {
-    navigation.navigate('VerRemedios');
-  };
-
-  // Verifica a hora atual para mostrar o modal
-  useEffect(() => {
-    const intervalo = setInterval(() => {
-      const agora = new Date();
-      const horaAtual = agora.toTimeString().slice(0, 5);
-      const hoje = diasDaSemana[agora.getDay()];
-      const horaRemedio = hora.toTimeString().slice(0, 5);
-
-      if (horaAtual === horaRemedio && diasSelecionados.includes(hoje)) {
-        setModalVisible(true);
-      }
-    }, 60000);
-
-    return () => clearInterval(intervalo);
-  }, [hora, diasSelecionados]);
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.titulo}>Cadastro de Remédio</Text>
+
       <Text style={styles.label}>Nome do Remédio</Text>
       <TextInput
         style={styles.input}
         value={nome}
         onChangeText={setNome}
-        placeholder="Digite o nome"
+        placeholder="Ex: Dipirona"
+        placeholderTextColor="#888"
       />
 
-      <Text style={styles.label}>Horário</Text>
-      <TouchableOpacity onPress={() => setMostrarPicker(true)} style={styles.timeButton}>
-        <Text style={styles.timeText}>{hora.toLocaleTimeString().slice(0, 5)}</Text>
+      <Text style={styles.label}>Escolha a Hora</Text>
+      <TouchableOpacity
+        onPress={() => setMostrarHoraPicker(true)}
+        style={styles.horaBotao}
+      >
+        <Text style={styles.horaTexto}>
+          {hora.getHours().toString().padStart(2, '0')}:
+          {hora.getMinutes().toString().padStart(2, '0')}
+        </Text>
       </TouchableOpacity>
-      {mostrarPicker && (
+
+      {mostrarHoraPicker && (
         <DateTimePicker
           value={hora}
           mode="time"
-          is24Hour={true}
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          display={Platform.OS === 'android' ? 'spinner' : 'default'}
           onChange={(_, selectedDate) => {
-            setMostrarPicker(false);
-            if (selectedDate) setHora(selectedDate);
+            const currentDate = selectedDate || hora;
+            setMostrarHoraPicker(false);
+            setHora(currentDate);
           }}
         />
       )}
 
       <Text style={styles.label}>Dias da Semana</Text>
       <View style={styles.diasContainer}>
-        {diasDaSemana.map(dia => (
+        {diasSemana.map(dia => (
           <TouchableOpacity
             key={dia}
-            style={[styles.diaButton, diasSelecionados.includes(dia) && styles.diaSelecionado]}
-            onPress={() => alternarDia(dia)}
+            onPress={() => toggleDia(dia)}
+            style={[
+              styles.dia,
+              diasSelecionados.includes(dia) && styles.diaSelecionado,
+            ]}
           >
-            <Text style={styles.diaTexto}>{dia}</Text>
+            <Text
+              style={[
+                styles.diaTexto,
+                diasSelecionados.includes(dia) && styles.diaTextoSelecionado,
+              ]}
+            >
+              {dia}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <TouchableOpacity style={styles.salvarButton} onPress={handleSalvar}>
-        <Text style={styles.salvarTexto}>Salvar</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.salvarButton} onPress={handleVerRemedios}>
-        <Text style={styles.salvarTexto}>Ver Remédios Cadastrados</Text>
-      </TouchableOpacity>
-
-      {/* Modal de confirmação */}
-      <Modal
-        visible={modalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Tomou o remédio "{nome}"?</Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#4CAF50' }]}
-                onPress={() => {
-                  setRemedioTomado('Sim');
-                  setModalVisible(false);
-                }}
-              >
-                <Text style={styles.modalButtonText}>Sim</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#F44336' }]}
-                onPress={() => {
-                  setRemedioTomado('Não');
-                  setModalVisible(false);
-                }}
-              >
-                <Text style={styles.modalButtonText}>Não</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </View>
+      <Button title="Salvar Remédio" color="#4CAF50" onPress={salvarRemedio} />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f0f4f7' },
-  label: { fontSize: 20, marginTop: 20, marginBottom: 5, color: '#333', fontWeight: 'bold' },
-  input: { backgroundColor: '#fff', padding: 15, borderRadius: 12, fontSize: 18 },
-  timeButton: { backgroundColor: '#fff', padding: 15, borderRadius: 12, alignItems: 'center', marginVertical: 10 },
-  timeText: { fontSize: 18, fontWeight: 'bold' },
-  diasContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 },
-  diaButton: { padding: 10, borderRadius: 10, backgroundColor: '#ccc', margin: 5, minWidth: 50, alignItems: 'center' },
-  diaSelecionado: { backgroundColor: '#1976D2' },
-  diaTexto: { color: '#fff', fontWeight: 'bold' },
-  salvarButton: { backgroundColor: '#388E3C', padding: 18, borderRadius: 14, marginTop: 40, alignItems: 'center' },
-  salvarTexto: { fontSize: 20, color: '#fff', fontWeight: 'bold' },
-
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
+  container: {
     padding: 25,
-    borderRadius: 20,
-    alignItems: 'center',
-    width: '80%',
+    backgroundColor: '#f5f5f5',
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
+  titulo: {
+    fontSize: 28,
     textAlign: 'center',
+    marginBottom: 30,
+    fontWeight: 'bold',
+    color: '#333',
   },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
+  label: {
+    fontSize: 20,
+    marginVertical: 10,
+    fontWeight: '600',
   },
-  modalButton: {
-    flex: 1,
-    padding: 12,
-    marginHorizontal: 10,
+  input: {
+    fontSize: 20,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+  },
+  horaBotao: {
+    backgroundColor: '#1976d2',
+    padding: 14,
     borderRadius: 10,
     alignItems: 'center',
+    marginBottom: 10,
   },
-  modalButtonText: {
-    color: '#fff',
+  horaTexto: {
+    fontSize: 22,
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  diasContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  dia: {
+    width: '28%',
+    paddingVertical: 12,
+    backgroundColor: '#eee',
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  diaSelecionado: {
+    backgroundColor: '#4caf50',
+  },
+  diaTexto: {
     fontSize: 18,
+    color: '#555',
+  },
+  diaTextoSelecionado: {
+    color: 'white',
     fontWeight: 'bold',
   },
 });

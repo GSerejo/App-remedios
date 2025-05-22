@@ -7,9 +7,9 @@ export default function VerRemediosScreen({ navigation }: any) {
 
   useEffect(() => {
     const carregarRemedios = async () => {
-      const registrosExistentes = await AsyncStorage.getItem('registros');
-      const registros = registrosExistentes ? JSON.parse(registrosExistentes) : [];
-      setRemedios(registros);
+      const dados = await AsyncStorage.getItem('remedios');
+      const lista = dados ? JSON.parse(dados) : [];
+      setRemedios(lista);
     };
 
     const unsubscribe = navigation.addListener('focus', carregarRemedios);
@@ -21,10 +21,10 @@ export default function VerRemediosScreen({ navigation }: any) {
   };
 
   const handleExcluir = async (index: number) => {
-    const registros = [...remedios];
-    registros.splice(index, 1);
-    await AsyncStorage.setItem('registros', JSON.stringify(registros));
-    setRemedios(registros);
+    const novaLista = [...remedios];
+    novaLista.splice(index, 1);
+    await AsyncStorage.setItem('remedios', JSON.stringify(novaLista));
+    setRemedios(novaLista);
   };
 
   return (
