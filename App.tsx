@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Button, AppState } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
+import * as ImagePicker from 'expo-image-picker';
 import HomeScreen from './screens/HomeScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import RecordsScreen from './screens/RecordsScreen';
@@ -59,26 +59,46 @@ export default function App() {
   };
 
   const handleConfirmacao = async (resposta: 'Sim' | 'Não') => {
-    setModalVisible(false);
-  
-    const novoRegistro = {
-      nome: nomeRemedio,
-      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      data: new Date().toLocaleDateString(),
-      tomado: resposta,
-    };
-  
-    try {
-      const registrosSalvos = await AsyncStorage.getItem('registros');
-      const registros = registrosSalvos ? JSON.parse(registrosSalvos) : [];
-      registros.push(novoRegistro);
-      await AsyncStorage.setItem('registros', JSON.stringify(registros));
-      console.log('Registro salvo:', novoRegistro);
-    } catch (error) {
-      console.error('Erro ao salvar registro:', error);
-    }
+  let imagem = null;
+
+  if (resposta === 'Sim') {
+    imagem = await escolherImagem();
+  }
+
+  const registro = {
+    nome: nomeRemedio,
+    data: new Date().toLocaleDateString(),
+    hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    tomado: resposta,
+    imagem, // URI da imagem capturada
   };
-  
+
+  const registrosExistentes = await AsyncStorage.getItem('registros');
+  const registros = registrosExistentes ? JSON.parse(registrosExistentes) : [];
+  registros.push(registro);
+  await AsyncStorage.setItem('registros', JSON.stringify(registros));
+
+  console.log('Registro salvo com imagem:', registro);
+  setModalVisible(false);
+};
+const escolherImagem = async () => {
+  const permissao = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permissao.granted) {
+    alert("Permissão para acessar a câmera é necessária.");
+    return null;
+  }
+
+  const resultado = await ImagePicker.launchCameraAsync({
+    allowsEditing: true,
+    quality: 0.5,
+  });
+
+  if (!resultado.canceled) {
+    return resultado.assets[0].uri;
+  }
+
+  return null;
+};
 
   return (
     <>

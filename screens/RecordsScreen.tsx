@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import { Image, Modal, TouchableWithoutFeedback } from 'react-native';
 
 export default function RegistrosScreen() {
   const [registros, setRegistros] = useState<any[]>([]);
@@ -45,20 +46,28 @@ export default function RegistrosScreen() {
 
   // Renderização de cada item da lista
   const renderItem = ({ item }: any) => {
-    const corStatus = item.tomado === 'Sim' ? 'green' : 'red';
-  
-    return (
-      <View style={styles.registroContainer}>
-        <Text style={styles.registroNome}>{item.nome || 'Sem nome'}</Text>
-        <Text style={styles.registroData}>
-          {item.data && item.hora ? `${item.data} ${item.hora}` : 'Data/hora não disponível'}
-        </Text>
-        <Text style={[styles.registroStatus, { color: corStatus }]}>
-          {item.tomado === 'Sim' ? 'Tomado' : (item.tomado === 'Não' ? 'Não Tomado' : 'Status desconhecido')}
-        </Text>
-      </View>
-    );
-  };
+  const corStatus = item.tomado === 'Sim' ? 'green' : 'red';
+
+  return (
+    <View style={styles.registroContainer}>
+      <Text style={styles.registroNome}>{item.nome || 'Sem nome'}</Text>
+      <Text style={styles.registroData}>
+        {item.data && item.hora ? `${item.data} ${item.hora}` : 'Data/hora não disponível'}
+      </Text>
+      <Text style={[styles.registroStatus, { color: corStatus }]}>
+        {item.tomado === 'Sim' ? 'Tomado' : (item.tomado === 'Não' ? 'Não Tomado' : 'Status desconhecido')}
+      </Text>
+
+      {item.imagem && (
+        <Image
+          source={{ uri: item.imagem }}
+          style={styles.registroImagem}
+          resizeMode="cover"
+        />
+      )}
+    </View>
+  );
+};
   
   
   
@@ -130,4 +139,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 18,
   },
+  registroImagem: {
+  width: '100%',
+  height: 200,
+  marginTop: 10,
+  borderRadius: 8,
+},
+
 });
