@@ -1,17 +1,16 @@
 import React, { useState, useCallback } from 'react';
-import { 
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert 
+import {
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
+  Image, ImageBackground
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { Image, Modal, TouchableWithoutFeedback } from 'react-native';
 
 export default function RegistrosScreen() {
   const [registros, setRegistros] = useState<any[]>([]);
 
-  // Função para carregar registros do AsyncStorage
   const carregarRegistros = async () => {
-    const registrosSalvos = await AsyncStorage.getItem('registros'); // use uma chave única consistente
+    const registrosSalvos = await AsyncStorage.getItem('registros');
     if (registrosSalvos) {
       setRegistros(JSON.parse(registrosSalvos));
     } else {
@@ -19,82 +18,91 @@ export default function RegistrosScreen() {
     }
   };
 
-  // Recarrega os registros toda vez que a tela fica em foco
   useFocusEffect(
     useCallback(() => {
       carregarRegistros();
     }, [])
   );
 
-  // Função para limpar registros com confirmação
   const limparRegistros = () => {
     Alert.alert(
       'Confirmar',
       'Tem certeza que deseja limpar todos os registros?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Sim', 
+        {
+          text: 'Sim',
           onPress: async () => {
             await AsyncStorage.removeItem('registros');
             setRegistros([]);
-          } 
+          }
         },
       ]
     );
   };
 
-  // Renderização de cada item da lista
   const renderItem = ({ item }: any) => {
-  const corStatus = item.tomado === 'Sim' ? 'green' : 'red';
+    const corStatus = item.tomado === 'Sim' ? 'green' : 'red';
+
+    return (
+      <View style={styles.registroContainer}>
+        <Text style={styles.registroNome}>{item.nome || 'Sem nome'}</Text>
+        <Text style={styles.registroData}>
+          {item.data && item.hora ? `${item.data} ${item.hora}` : 'Data/hora não disponível'}
+        </Text>
+        <Text style={[styles.registroStatus, { color: corStatus }]}>
+          {item.tomado === 'Sim' ? 'Tomado' : (item.tomado === 'Não' ? 'Não Tomado' : 'Status desconhecido')}
+        </Text>
+
+        {item.imagem && (
+          <Image
+            source={{ uri: item.imagem }}
+            style={styles.registroImagem}
+            resizeMode="cover"
+          />
+        )}
+      </View>
+    );
+  };
 
   return (
-    <View style={styles.registroContainer}>
-      <Text style={styles.registroNome}>{item.nome || 'Sem nome'}</Text>
-      <Text style={styles.registroData}>
-        {item.data && item.hora ? `${item.data} ${item.hora}` : 'Data/hora não disponível'}
-      </Text>
-      <Text style={[styles.registroStatus, { color: corStatus }]}>
-        {item.tomado === 'Sim' ? 'Tomado' : (item.tomado === 'Não' ? 'Não Tomado' : 'Status desconhecido')}
-      </Text>
+    <ImageBackground
+      source={require('../assets/wallpaper.jpg')} // Altere o caminho da imagem se necessário
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <View style={styles.container}>
+        <Text style={styles.title}>Registros de Medicação</Text>
 
-      {item.imagem && (
-        <Image
-          source={{ uri: item.imagem }}
-          style={styles.registroImagem}
-          resizeMode="cover"
+        <TouchableOpacity style={styles.limparButton} onPress={limparRegistros}>
+          <Text style={styles.limparTexto}>Limpar Registros</Text>
+        </TouchableOpacity>
+
+        <FlatList
+          data={registros}
+          renderItem={renderItem}
+          keyExtractor={(item, index) => index.toString()}
+          ListEmptyComponent={
+            <Text style={{ textAlign: 'center', marginTop: 20, color: '#999' }}>
+              Nenhum registro encontrado.
+            </Text>
+          }
         />
-      )}
-    </View>
-  );
-};
-  
-  
-  
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Registros de Medicação</Text>
-
-      <TouchableOpacity style={styles.limparButton} onPress={limparRegistros}>
-        <Text style={styles.limparTexto}>Limpar Registros</Text>
-      </TouchableOpacity>
-
-      <FlatList
-        data={registros}
-        renderItem={renderItem}
-        keyExtractor={(item, index) => index.toString()}
-        ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 20, color: '#999' }}>Nenhum registro encontrado.</Text>}
-      />
-    </View>
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f0f4f7',
+    backgroundColor: 'rgba(240, 244, 247, 0)', // Fundo com leve transparência
   },
   title: {
     fontSize: 24,
@@ -140,10 +148,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   registroImagem: {
-  width: '100%',
-  height: 200,
-  marginTop: 10,
-  borderRadius: 8,
-},
-
+    width: '100%',
+    height: 200,
+    marginTop: 10,
+    borderRadius: 8,
+  },
 });
