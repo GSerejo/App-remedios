@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, Button, StyleSheet } from 'react-native';
+import { enviarMensagemWhatsApp } from './services/whatsappService';
 
 export default function NotificacaoModal({ visible, nomeRemedio, onConfirm, onClose }: any) {
   return (
@@ -9,7 +10,14 @@ export default function NotificacaoModal({ visible, nomeRemedio, onConfirm, onCl
           <Text style={styles.titulo}>Hora do Remédio!</Text>
           <Text style={styles.nome}>{nomeRemedio}</Text>
           <View style={styles.botoes}>
-            <Button title="Já Tomei" onPress={() => onConfirm('Sim')} color="#4caf50" />
+            <Button
+              title="Já Tomei"
+              onPress={async () => {
+                await onConfirm('Sim');
+                await enviarMensagemWhatsApp(nomeRemedio); // Envia mensagem simples
+              }}
+              color="#4caf50"
+            />
             <Button title="Ainda Não" onPress={() => onConfirm('Não')} color="#f44336" />
           </View>
         </View>
@@ -20,18 +28,30 @@ export default function NotificacaoModal({ visible, nomeRemedio, onConfirm, onCl
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center',
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modal: {
-    backgroundColor: 'white', padding: 30, borderRadius: 10, width: '80%',
+    backgroundColor: 'white',
+    padding: 30,
+    borderRadius: 10,
+    width: '80%',
   },
   titulo: {
-    fontSize: 22, fontWeight: 'bold', marginBottom: 10, textAlign: 'center',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
   },
   nome: {
-    fontSize: 20, textAlign: 'center', marginBottom: 20,
+    fontSize: 20,
+    textAlign: 'center',
+    marginBottom: 20,
   },
   botoes: {
-    flexDirection: 'row', justifyContent: 'space-around',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
   },
 });
